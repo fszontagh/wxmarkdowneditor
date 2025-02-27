@@ -119,18 +119,13 @@ void wxMarkDownEditormainFrame::OnExit(wxCommandEvent& event) {
 }
 
 void wxMarkDownEditormainFrame::OnSave(wxCommandEvent& event) {
-    if (this->editorContentChanged) {
-        wxString filename = wxFileSelector(_("Save File"), wxEmptyString, wxEmptyString, wxEmptyString, _("Markdown Files (*.md)|*.md"), wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
-        if (!filename.IsEmpty()) {
-            wxFile file;
-            if (file.Create(filename, true)) {
-                file.Write(this->editor->GetText());
-                file.Close();
-                this->editorContentChanged = false;
-                wxSetWorkingDirectory(wxFileName(filename).GetPath());
-            }
-        } else {
-            wxMessageBox(_("Error saving file!"), _("Error"), wxICON_ERROR);
+    if (this->currentFile && this->currentFile->contentChanged) {
+        wxFile file;
+        if (file.Create(this->currentFile->file.GetAbsolutePath(), true)) {
+            file.Write(this->currentFile->content);
+            file.Close();
+            this->currentFile->contentChanged = false;
+            wxSetWorkingDirectory(this->currentFile->file.GetPath());
         }
     }
 }
@@ -141,14 +136,20 @@ void wxMarkDownEditormainFrame::OnSaveAs(wxCommandEvent& event) {
         wxFile file;
         if (file.Create(filename, true)) {
             wxFileName fn(filename);
-            if (fn.GetExt().Lower() == "html") {
-                file.Write(this->openFilesHtmlOutput[this->currentFileName.GetFullPath()]);
-            } else {
-                file.Write(this->editor->GetText());
+            wxString content;
+            if (this->currentFile == nullptr) {
+                file.Close();
+                return;
             }
+            if (fn.GetExt().Lower() == "html") {
+                content = this->currentFile->html;
+            } else {
+                content = this->currentFile->content;
+            }
+            file.Write(content);
             file.Close();
-            this->editorContentChanged = false;
-            wxSetWorkingDirectory(wxFileName(filename).GetPath());
+            this->currentFile->contentChanged = false;
+            wxSetWorkingDirectory(this->currentFile->file.GetPath());
         }
     } else {
         wxMessageBox(_("Error saving file!"), _("Error"), wxICON_ERROR);
@@ -157,37 +158,33 @@ void wxMarkDownEditormainFrame::OnSaveAs(wxCommandEvent& event) {
 void wxMarkDownEditormainFrame::UpdatePreview(bool forceUpdate) {
     const auto currentContent = this->editor->GetText();
 
-    if (!this->currentFileName.IsOk()) {
+    if (this->currentFile == nullptr) {
         return;
     }
 
-    wxString fullPath = this->currentFileName.GetFullPath();
-
-    if (forceUpdate || openFilesContent.find(fullPath) == openFilesContent.end() || openFilesContent[fullPath] != currentContent) {
-        openFilesContent[fullPath] = currentContent;
-
-        std::stringstream markdownInput(currentContent.ToStdString());
-        std::string htmlOutput = parser->Parse(markdownInput);
-
-        wxString cssFilePath = this->currentCssFile;
-        wxString cssLink;
-
-        if (!cssFilePath.IsEmpty() && wxFileExists(cssFilePath)) {
-            cssLink = "<link rel=\"stylesheet\" type=\"text/css\" href=\"" + cssFilePath + "\" />";
-        } else {
-            cssLink = "<style type=\"text/css\">" + defaultCss + "</style>";
-        }
-
-        wxString fullHtml = "<html><head><!-- injected -->" + cssLink + "</head><body>" + htmlOutput + "</body></html>";
-
-        openFilesHtmlOutput[fullPath] = fullHtml;
-
-        // this->htmlPreview->SetPage(fullHtml);
-        this->webView->SetPage(fullHtml, "file://");
-        this->editorContentChanged = true;
+    if (this->currentFile->content == currentContent && !forceUpdate) {
+        return;
     }
-}
 
+    this->currentFile->content = wxString(currentContent);
+
+    std::stringstream markdownInput(currentContent.ToStdString());
+    std::string htmlOutput = parser->Parse(markdownInput);
+
+    wxString cssFilePath = this->currentCssFile;
+    wxString cssLink;
+
+    if (!cssFilePath.IsEmpty() && wxFileExists(cssFilePath)) {
+        cssLink = "<link rel=\"stylesheet\" type=\"text/css\" href=\"" + cssFilePath + "\" />";
+    } else {
+        cssLink = "<style type=\"text/css\">" + defaultCss + "</style>";
+    }
+
+    this->currentFile->html           = "<html><head><!-- injected -->" + cssLink + "</head><body>" + htmlOutput + "</body></html>";
+    this->currentFile->contentChanged = true;
+
+    this->webView->SetPage(this->currentFile->html, "file://");
+}
 void wxMarkDownEditormainFrame::OnSplitterSashPositionChanged(wxSplitterEvent& event) {
     this->config->Write("SplitterPosition/m_splitter1", this->m_splitter1->GetSashPosition());
 }
@@ -202,26 +199,21 @@ void wxMarkDownEditormainFrame::OnOpenFileActivated(wxDataViewEvent& event) {
         return;
     }
 
-    wxString content = this->openFilesContent.at(filename.GetAbsolutePath());
-    this->editor->SetText(content);
-    if (this->currentFileName != filename) {
-        this->currentFileName = filename;
-        this->UpdatePreview(true);
-        this->SetTitle(this->currentFileName.GetFullName() + " - wxMarkDownEditor");
+    if (this->files.find(filename.GetAbsolutePath()) == this->files.end()) {
+        return;
     }
-}
-const wxString wxMarkDownEditormainFrame::FormatTimeAgo(const wxDateTime& lastModified) {
-    wxDateTime now  = wxDateTime::Now();
-    wxTimeSpan diff = now - lastModified;
+    if (this->currentFile == this->files.at(filename.GetAbsolutePath())) {
+        return;
+    }
+    this->currentFile = this->files.at(filename.GetAbsolutePath());
 
-    if (diff.GetMinutes() < 1) {
-        return _("Last modified: just now");
-    } else if (diff.GetMinutes() < 60) {
-        return wxString::Format(_("%d minute(s) ago"), diff.GetMinutes());
-    } else {
-        return lastModified.Format(_("%Y-%m-%d %H:%M"));
-    }
+    wxString content = this->currentFile->content;
+    this->editor->SetText(content);
+
+    this->UpdatePreview(true);
+    this->SetTitle(this->currentFile->file.GetFullName() + " - wxMarkDownEditor");
 }
+
 void wxMarkDownEditormainFrame::LoadStylesFromConfig(const wxString& paletteName) {
     // Létrehozzuk az egyedi config fájl objektumot
     wxConfig* config = new wxConfig("wxMarkDownEditor", "", "path_to_config.ini");
@@ -322,12 +314,17 @@ void wxMarkDownEditormainFrame::OnWebViewNavigating(wxWebViewEvent& event) {
         event.Skip();
         return;
     }
+    // there is no page loaded
+    if (url == "about:blank" || this->currentFile == nullptr) {
+        event.Veto();
+        return;
+    }
 
     wxString fname = url.SubString(7, url.Len() - 1);
     wxFileName fileName(fname);
 
     wxString fileWithCurrentDir = fileName.GetFullPath();
-    fileWithCurrentDir.Prepend(this->currentFileName.GetPath() + wxFileName::GetPathSeparator());
+    fileWithCurrentDir.Prepend(this->currentFile->file.GetPath() + wxFileName::GetPathSeparator());
     wxFileName fileNameWithCurrentDir(fileWithCurrentDir);
 
     if (wxFileExists(fileWithCurrentDir) && fileNameWithCurrentDir.GetExt().Lower() == "md") {
@@ -400,30 +397,66 @@ void wxMarkDownEditormainFrame::OpenFile(const wxString& fileName) {
             file.ReadAll(&content);
             this->editor->SetText(content);
             file.Close();
-            this->editorContentChanged = false;
-            this->currentFileName      = wxFileName(fileName);
 
-            wxSetWorkingDirectory(this->currentFileName.GetPath());
+            auto info = std::make_shared<FileInfo>(fileName, this->GetEventHandler());
+            info->SetCallback(std::bind(&wxMarkDownEditormainFrame::UpdateOpenedFileInfo, this, std::placeholders::_1, std::placeholders::_2));
+            this->currentFile                         = info;
+            this->files[info->file.GetAbsolutePath()] = std::move(info);
 
-            this->config->Write("LastOpenFile", this->currentFileName.GetFullPath());
-            this->config->Write("LastOpenFileDirectory", this->currentFileName.GetPath());
+            wxSetWorkingDirectory(this->currentFile->file.GetPath());
 
-            wxString fileLastModified = wxString::Format(_("%s"), wxMarkDownEditormainFrame::FormatTimeAgo(this->currentFileName.GetModificationTime()));
+            this->config->Write("LastOpenFile", this->currentFile->file.GetFullPath());
+            this->config->Write("LastOpenFileDirectory", this->currentFile->file.GetPath());
 
             wxVector<wxVariant> data;
-            data.push_back(wxVariant(this->currentFileName.GetFullName()));
-            data.push_back(wxVariant(fileLastModified));
+            data.push_back(wxVariant(this->currentFile->file.GetFullName()));
+            data.push_back(wxVariant(this->currentFile->GetTimeAgo()));
 
             this->m_currentOpenFiles->AppendItem(data);
 
             auto viewItem = this->m_currentOpenFiles->RowToItem(this->m_currentOpenFiles->GetItemCount() - 1);
 
-            ItemData* itemData = new ItemData(this->currentFileName);
+            ItemData* itemData = new ItemData(this->currentFile->file);
             this->m_currentOpenFiles->SetItemData(viewItem, itemData->GetData());
             this->m_currentOpenFiles->SetCurrentItem(viewItem);
 
             this->UpdatePreview();
-            this->SetTitle(this->currentFileName.GetFullName() + " - wxMarkDownEditor");
+            this->SetTitle(this->currentFile->file.GetFullName() + " - wxMarkDownEditor");
+        }
+    }
+}
+void wxMarkDownEditormainFrame::UpdateOpenedFileInfo(const wxFileName& file, FileInfo::CallbackType callback) {
+    // find the file in the m_currentOpenFiles's items
+    for (auto i = this->m_currentOpenFiles->GetItemCount() - 1; i >= 0; i--) {
+        auto item = this->m_currentOpenFiles->RowToItem(i);
+        if (item.IsOk() == false) {
+            continue;
+        }
+        auto itemData = reinterpret_cast<ItemData*>(this->m_currentOpenFiles->GetItemData(item));
+        if (itemData->GetInfo() == file) {
+            auto info = this->files[itemData->GetInfo().GetFullPath()];
+            if (info == nullptr) {
+                continue;
+            }
+
+            this->m_currentOpenFiles->SetTextValue(info->GetTimeAgo(), i, 1);
+            if (callback == FileInfo::CallbackType::CHANGED) {
+                // re-read the file contents and check if differ from the editor's content
+                wxString content;
+                wxFile file;
+                if (file.Open(info->file.GetFullPath())) {
+                    file.ReadAll(&content);
+                    file.Close();
+                    if (content != this->editor->GetText()) {
+                        wxMessageDialog dialog(this, "The file has been modified externally. Do you want to load the new content?", "File Changed", wxYES_NO | wxICON_QUESTION);
+                        if (dialog.ShowModal() == wxID_YES) {
+                            this->editor->SetText(content);
+                            this->UpdatePreview(true);
+                        }
+                    }
+                }
+            }
+            return;
         }
     }
 }

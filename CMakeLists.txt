@@ -4,7 +4,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(
-    wxmarkdownexitor
+    wxmarkdowneditor
     VERSION 0.0.1
     DESCRIPTION "A wxWidgets based markdown editor"
     LANGUAGES CXX
@@ -31,6 +31,7 @@ include(FetchContent)
 FetchContent_Declare(
   maddy
   URL https://github.com/progsource/maddy/releases/download/1.3.0/maddy-src.zip
+  DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
 FetchContent_MakeAvailable(maddy)
 
