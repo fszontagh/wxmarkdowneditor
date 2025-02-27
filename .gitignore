@@ -30,3 +30,9 @@
 *.exe
 *.out
 *.app
+
+# Dolders
+.vscode
+.cache
+.idea
+build
