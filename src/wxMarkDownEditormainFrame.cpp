@@ -83,7 +83,10 @@ wxMarkDownEditormainFrame::wxMarkDownEditormainFrame(wxWindow* parent)
         }
     }
 
-    auto cfg = wxStandardPaths::Get().GetDataDir();
+    auto cfg = wxStandardPaths::Get().GetUserDataDir();
+    if (!wxDirExists(cfg)) {
+        wxMkdir(cfg);
+    }
     wxFileName configFilePath(cfg, "wxMarkDownEditorThemes.ini");
     this->CreateDefaultConfigFile(configFilePath.GetFullPath());
 }
@@ -267,7 +270,6 @@ void wxMarkDownEditormainFrame::OnPaletteChange(wxCommandEvent& event) {
 void wxMarkDownEditormainFrame::CreateDefaultConfigFile(const wxString& configFilePath) {
     wxFileName configFile(configFilePath);
     if (configFile.Exists()) {
-        wxLogMessage("Configuration file already exists.");
         return;
     }
 
@@ -303,8 +305,6 @@ void wxMarkDownEditormainFrame::CreateDefaultConfigFile(const wxString& configFi
     config->Write("Palette1", defaultPalette1);
     config->Write("Palette2", defaultPalette2);
     config->Flush();
-
-    wxLogMessage(wxString::Format("Default configuration file created at: %s", configFilePath));
 }
 void wxMarkDownEditormainFrame::OnWebViewNavigating(wxWebViewEvent& event) {
     auto url = event.GetURL();

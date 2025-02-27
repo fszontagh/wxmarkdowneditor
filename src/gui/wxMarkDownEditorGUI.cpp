@@ -7,6 +7,9 @@
 
 #include "wxMarkDownEditorGUI.h"
 
+#include "../icons/html_code_16.png.h"
+#include "../icons/logo_16.png.h"
+
 // Using the construction of a static object to ensure that the help provider is set
 // wx Manages the most recent HelpProvider passed to ::Set, but not the previous ones
 // If ::Set gets called more than once, the previous one is returned and should be deleted
@@ -55,8 +58,14 @@ mainFrame::mainFrame( wxWindow* parent, wxWindowID id, const wxString& title, co
 	wxBoxSizer* bSizer7;
 	bSizer7 = new wxBoxSizer( wxVERTICAL );
 
-	m_notebook1 = new wxNotebook( m_panel5, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0 );
-	MarkDownPanel = new wxPanel( m_notebook1, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	m_notebook1 = new wxNotebook( m_panel5, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxNB_NOPAGETHEME|wxNB_TOP|wxBORDER_DEFAULT, wxT("notebook1") );
+	wxSize m_notebook1ImageSize = wxSize( 16,16 );
+	int m_notebook1Index = 0;
+	wxImageList* m_notebook1Images = new wxImageList( m_notebook1ImageSize.GetWidth(), m_notebook1ImageSize.GetHeight() );
+	m_notebook1->AssignImageList( m_notebook1Images );
+	wxBitmap m_notebook1Bitmap;
+	wxImage m_notebook1Image;
+	MarkDownPanel = new wxPanel( m_notebook1, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL, wxT("TabMarkdown") );
 	wxBoxSizer* bSizer2;
 	bSizer2 = new wxBoxSizer( wxVERTICAL );
 
@@ -103,7 +112,15 @@ mainFrame::mainFrame( wxWindow* parent, wxWindowID id, const wxString& title, co
 	MarkDownPanel->Layout();
 	bSizer2->Fit( MarkDownPanel );
 	m_notebook1->AddPage( MarkDownPanel, _("MarkDown"), true );
-	m_panel3 = new wxPanel( m_notebook1, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	m_notebook1Bitmap = logo_16_png_to_wx_bitmap();
+	if ( m_notebook1Bitmap.Ok() )
+	{
+		m_notebook1Image = m_notebook1Bitmap.ConvertToImage();
+		m_notebook1Images->Add( m_notebook1Image.Scale( m_notebook1ImageSize.GetWidth(), m_notebook1ImageSize.GetHeight() ) );
+		m_notebook1->SetPageImage( m_notebook1Index, m_notebook1Index );
+		m_notebook1Index++;
+	}
+	m_panel3 = new wxPanel( m_notebook1, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL, wxT("TabHtml") );
 	bSizer4 = new wxBoxSizer( wxVERTICAL );
 
 
@@ -111,6 +128,14 @@ mainFrame::mainFrame( wxWindow* parent, wxWindowID id, const wxString& title, co
 	m_panel3->Layout();
 	bSizer4->Fit( m_panel3 );
 	m_notebook1->AddPage( m_panel3, _("Preview"), false );
+	m_notebook1Bitmap = html_code_16_png_to_wx_bitmap();
+	if ( m_notebook1Bitmap.Ok() )
+	{
+		m_notebook1Image = m_notebook1Bitmap.ConvertToImage();
+		m_notebook1Images->Add( m_notebook1Image.Scale( m_notebook1ImageSize.GetWidth(), m_notebook1ImageSize.GetHeight() ) );
+		m_notebook1->SetPageImage( m_notebook1Index, m_notebook1Index );
+		m_notebook1Index++;
+	}
 
 	bSizer7->Add( m_notebook1, 1, wxEXPAND | wxALL, 5 );
 
@@ -137,7 +162,7 @@ mainFrame::mainFrame( wxWindow* parent, wxWindowID id, const wxString& title, co
 	fileMenu->Append( m_openFile );
 
 	wxMenuItem* m_save;
-	m_save = new wxMenuItem( fileMenu, wxID_ANY, wxString( _("&Save") ) , wxEmptyString, wxITEM_NORMAL );
+	m_save = new wxMenuItem( fileMenu, wxID_SAVE, wxString( _("&Save") ) , wxEmptyString, wxITEM_NORMAL );
 	#ifdef __WXMSW__
 	m_save->SetBitmaps( wxArtProvider::GetBitmap( wxASCII_STR(wxART_FILE_SAVE), wxASCII_STR(wxART_MENU) ) );
 	#elif (defined( __WXGTK__ ) || defined( __WXOSX__ ))
@@ -146,7 +171,7 @@ mainFrame::mainFrame( wxWindow* parent, wxWindowID id, const wxString& title, co
 	fileMenu->Append( m_save );
 
 	wxMenuItem* m_saveAs;
-	m_saveAs = new wxMenuItem( fileMenu, wxID_ANY, wxString( _("S&ave as...") ) , wxEmptyString, wxITEM_NORMAL );
+	m_saveAs = new wxMenuItem( fileMenu, wxID_SAVEAS, wxString( _("S&ave as...") ) , wxEmptyString, wxITEM_NORMAL );
 	#ifdef __WXMSW__
 	m_saveAs->SetBitmaps( wxArtProvider::GetBitmap( wxASCII_STR(wxART_FILE_SAVE_AS), wxASCII_STR(wxART_MENU) ) );
 	#elif (defined( __WXGTK__ ) || defined( __WXOSX__ ))
@@ -157,7 +182,7 @@ mainFrame::mainFrame( wxWindow* parent, wxWindowID id, const wxString& title, co
 	fileMenu->AppendSeparator();
 
 	wxMenuItem* m_menuExit;
-	m_menuExit = new wxMenuItem( fileMenu, wxID_ANY, wxString( _("Exit") ) , wxEmptyString, wxITEM_NORMAL );
+	m_menuExit = new wxMenuItem( fileMenu, wxID_EXIT, wxString( _("Exit") ) , wxEmptyString, wxITEM_NORMAL );
 	#ifdef __WXMSW__
 	m_menuExit->SetBitmaps( wxArtProvider::GetBitmap( wxASCII_STR(wxART_QUIT), wxASCII_STR(wxART_MENU) ) );
 	#elif (defined( __WXGTK__ ) || defined( __WXOSX__ ))
@@ -169,6 +194,8 @@ mainFrame::mainFrame( wxWindow* parent, wxWindowID id, const wxString& title, co
 
 	this->SetMenuBar( mainMenuBar );
 
+
+	this->Centre( wxBOTH );
 
 	// Connect Events
 	m_splitter1->Connect( wxEVT_COMMAND_SPLITTER_SASH_POS_CHANGED, wxSplitterEventHandler( mainFrame::OnSplitterSashPositionChanged ), NULL, this );

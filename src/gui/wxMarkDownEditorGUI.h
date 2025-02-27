@@ -24,6 +24,7 @@
 #include <wx/image.h>
 #include <wx/icon.h>
 #include <wx/notebook.h>
+#include <wx/imaglist.h>
 #include <wx/splitter.h>
 #include <wx/statusbr.h>
 #include <wx/menu.h>
@@ -68,7 +69,7 @@ class mainFrame : public wxFrame
 	public:
 		wxBoxSizer* bSizer4;
 
-		mainFrame( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = _("Markdown Master"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 800,600 ), long style = wxDEFAULT_FRAME_STYLE|wxTAB_TRAVERSAL );
+		mainFrame( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = _("wxMarkdownEditor"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 800,600 ), long style = wxDEFAULT_FRAME_STYLE|wxTAB_TRAVERSAL );
 
 		~mainFrame();
 
