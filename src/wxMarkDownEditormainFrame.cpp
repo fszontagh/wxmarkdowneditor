@@ -1,15 +1,21 @@
 #include "wxMarkDownEditormainFrame.h"
+
+
 #include <wx/filedlg.h>
 #include <wx/log.h>
 #include <wx/msgdlg.h>
 #include <wx/stdpaths.h>
 
 #include "gui/defaultCss.h"
+#include "registry.h"
 #include "utils/ItemData.h"
 
 wxMarkDownEditormainFrame::wxMarkDownEditormainFrame(wxWindow* parent)
     : mainFrame(parent) {
     this->config = new wxConfig("wxMarkDownEditor");
+
+    this->enable_gfm_extensions(this->parser);
+
 
     this->webView = wxWebView::New(m_panel3, wxID_ANY, "about:blank", wxDefaultPosition, wxDefaultSize);
     this->webView->Connect(wxEVT_WEBVIEW_NAVIGATING, wxWebViewEventHandler(wxMarkDownEditormainFrame::OnWebViewNavigating), nullptr, this);
@@ -18,41 +24,6 @@ wxMarkDownEditormainFrame::wxMarkDownEditormainFrame(wxWindow* parent)
 
     // htmlPreview = new wxHtmlWindow( m_panel3, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxHW_SCROLLBAR_AUTO );
     this->bSizer4->Add(this->webView, 1, wxALL | wxEXPAND, 5);
-
-    // Set lexer for markdown syntax
-    this->editor->SetLexer(wxSTC_LEX_MARKDOWN);
-    this->editor->SetWrapMode(wxSTC_WRAP_WORD);
-    this->editor->SetWrapVisualFlags(wxSTC_WRAPVISUALFLAG_END);
-
-    // Format headers
-    this->editor->StyleSetForeground(wxSTC_MARKDOWN_HEADER1, *wxRED);
-    this->editor->StyleSetForeground(wxSTC_MARKDOWN_HEADER2, *wxBLUE);
-    this->editor->StyleSetForeground(wxSTC_MARKDOWN_HEADER3, *wxGREEN);
-
-    // Format code blocks
-    this->editor->StyleSetBackground(wxSTC_MARKDOWN_CODE, *wxLIGHT_GREY);
-    this->editor->StyleSetForeground(wxSTC_MARKDOWN_CODE, *wxBLACK);
-
-    // Format italic and bold text
-    this->editor->StyleSetBold(wxSTC_MARKDOWN_EM1, true);    // Italic text
-    this->editor->StyleSetItalic(wxSTC_MARKDOWN_EM2, true);  // Bold text
-
-    // Format links
-    this->editor->StyleSetForeground(wxSTC_MARKDOWN_LINK, *wxBLUE);
-    this->editor->StyleSetUnderline(wxSTC_MARKDOWN_LINK, true);  // Underlined links
-
-    // Format list items
-    this->editor->StyleSetForeground(wxSTC_MARKDOWN_OLIST_ITEM, *wxBLACK);
-    this->editor->StyleSetBackground(wxSTC_MARKDOWN_OLIST_ITEM, *wxLIGHT_GREY);
-
-    this->editor->StyleSetForeground(wxSTC_MARKDOWN_ULIST_ITEM, *wxBLACK);
-    this->editor->StyleSetBackground(wxSTC_MARKDOWN_ULIST_ITEM, *wxLIGHT_GREY);
-
-    // Format normal text (default)
-    this->editor->StyleSetForeground(wxSTC_MARKDOWN_DEFAULT, *wxBLACK);
-
-    // Other custom formatting
-    this->editor->StyleSetForeground(wxSTC_MARKDOWN_BLOCKQUOTE, wxColour(128, 128, 128));  // Grey color for blockquote
 
     auto splitterPos = this->config->Read("/SplitterPosition/m_splitter1", 300);
     this->m_splitter1->SetSashPosition(splitterPos);
@@ -72,6 +43,7 @@ wxMarkDownEditormainFrame::wxMarkDownEditormainFrame(wxWindow* parent)
 }
 
 wxMarkDownEditormainFrame::~wxMarkDownEditormainFrame() {
+    cmark_parser_free(this->parser);
     if (updateThread) {
         updateThread->Stop();
         delete updateThread;
@@ -177,12 +149,9 @@ void wxMarkDownEditormainFrame::OnSaveAs(wxCommandEvent& event) {
     }
 }
 void wxMarkDownEditormainFrame::UpdatePreview(bool forceUpdate) {
-
-
     if (this->currentFile == nullptr) {
         return;
     }
-
 
     const auto currentContent = this->currentFile->editor->GetText();
     if (this->currentFile->content == currentContent && !forceUpdate) {
@@ -191,8 +160,10 @@ void wxMarkDownEditormainFrame::UpdatePreview(bool forceUpdate) {
 
     this->currentFile->content = wxString(currentContent);
     auto str                   = currentContent.utf8_string();
-    cmark_node* root           = cmark_parse_document(str.c_str(), str.size(), CMARK_OPT_DEFAULT);
-    char* html                 = cmark_render_html(root, CMARK_OPT_DEFAULT | CMARK_OPT_VALIDATE_UTF8);
+
+
+    cmark_node* root = cmark_parse_document(str.c_str(), str.size(), CMARK_OPT_DEFAULT);
+    char *html = cmark_render_html(root, CMARK_OPT_DEFAULT | CMARK_OPT_UNSAFE, cmark_parser_get_syntax_extensions(this->parser));
 
     wxString wxHtmlOutput = wxString::FromUTF8(html);
 
@@ -245,13 +216,18 @@ void wxMarkDownEditormainFrame::OnOpenFileActivated(wxDataViewEvent& event) {
     }
 }
 
-void wxMarkDownEditormainFrame::LoadStylesFromConfig(const wxString& paletteName) {
-    // Létrehozzuk az egyedi config fájl objektumot
-    wxConfig* config = new wxConfig("wxMarkDownEditor", "", "path_to_config.ini");
+void wxMarkDownEditormainFrame::LoadStylesFromConfig(const wxString& paletteName, wxStyledTextCtrl* editor) {
+    wxConfig* config = new wxConfig("wxMarkDownEditor", "", "editor_style.ini");
 
     if (!config) {
         wxLogError("Unable to load configuration.");
         return;
+    }
+    if (editor == nullptr) {
+        if (this->currentFile == nullptr) {
+            return;
+        }
+        editor = this->currentFile->editor;
     }
 
     std::map<wxString, wxColour> colorMap;
@@ -267,29 +243,29 @@ void wxMarkDownEditormainFrame::LoadStylesFromConfig(const wxString& paletteName
     colorMap["quote_color"]       = wxColour(config->Read(prefix + "quote_color", "#A9A9A9"));
     colorMap["normal_text_color"] = wxColour(config->Read(prefix + "normal_text_color", "#000000"));
 
-    this->editor->SetLexer(wxSTC_LEX_MARKDOWN);
-    this->editor->SetWrapMode(wxSTC_WRAP_WORD);
-    this->editor->SetWrapVisualFlags(wxSTC_WRAPVISUALFLAG_END);
+    editor->SetLexer(wxSTC_LEX_MARKDOWN);
+    editor->SetWrapMode(wxSTC_WRAP_WORD);
+    editor->SetWrapVisualFlags(wxSTC_WRAPVISUALFLAG_END);
 
-    this->editor->StyleSetForeground(wxSTC_MARKDOWN_HEADER1, colorMap["header1_color"]);
-    this->editor->StyleSetForeground(wxSTC_MARKDOWN_HEADER2, colorMap["header2_color"]);
-    this->editor->StyleSetForeground(wxSTC_MARKDOWN_HEADER3, colorMap["header3_color"]);
+    editor->StyleSetForeground(wxSTC_MARKDOWN_HEADER1, colorMap["header1_color"]);
+    editor->StyleSetForeground(wxSTC_MARKDOWN_HEADER2, colorMap["header2_color"]);
+    editor->StyleSetForeground(wxSTC_MARKDOWN_HEADER3, colorMap["header3_color"]);
 
-    this->editor->StyleSetBackground(wxSTC_MARKDOWN_CODE, colorMap["code_background"]);
-    this->editor->StyleSetForeground(wxSTC_MARKDOWN_CODE, colorMap["code_foreground"]);
+    editor->StyleSetBackground(wxSTC_MARKDOWN_CODE, colorMap["code_background"]);
+    editor->StyleSetForeground(wxSTC_MARKDOWN_CODE, colorMap["code_foreground"]);
 
-    this->editor->StyleSetForeground(wxSTC_MARKDOWN_LINK, colorMap["link_color"]);
-    this->editor->StyleSetUnderline(wxSTC_MARKDOWN_LINK, true);  // Aláhúzott linkek
+    editor->StyleSetForeground(wxSTC_MARKDOWN_LINK, colorMap["link_color"]);
+    editor->StyleSetUnderline(wxSTC_MARKDOWN_LINK, true);  // Aláhúzott linkek
 
-    this->editor->StyleSetForeground(wxSTC_MARKDOWN_OLIST_ITEM, colorMap["list_color"]);
-    this->editor->StyleSetBackground(wxSTC_MARKDOWN_OLIST_ITEM, colorMap["code_background"]);
+    editor->StyleSetForeground(wxSTC_MARKDOWN_OLIST_ITEM, colorMap["list_color"]);
+    editor->StyleSetBackground(wxSTC_MARKDOWN_OLIST_ITEM, colorMap["code_background"]);
 
-    this->editor->StyleSetForeground(wxSTC_MARKDOWN_ULIST_ITEM, colorMap["list_color"]);
-    this->editor->StyleSetBackground(wxSTC_MARKDOWN_ULIST_ITEM, colorMap["code_background"]);
+    editor->StyleSetForeground(wxSTC_MARKDOWN_ULIST_ITEM, colorMap["list_color"]);
+    editor->StyleSetBackground(wxSTC_MARKDOWN_ULIST_ITEM, colorMap["code_background"]);
 
-    this->editor->StyleSetForeground(wxSTC_MARKDOWN_DEFAULT, colorMap["normal_text_color"]);
+    editor->StyleSetForeground(wxSTC_MARKDOWN_DEFAULT, colorMap["normal_text_color"]);
 
-    this->editor->StyleSetForeground(wxSTC_MARKDOWN_BLOCKQUOTE, colorMap["quote_color"]);
+    editor->StyleSetForeground(wxSTC_MARKDOWN_BLOCKQUOTE, colorMap["quote_color"]);
 }
 void wxMarkDownEditormainFrame::OnPaletteChange(wxCommandEvent& event) {
     wxString selectedPalette = event.GetString();
@@ -579,4 +555,59 @@ void wxMarkDownEditormainFrame::StoreFileHistory(const wxString& filePath) {
     config->SetPath(wxT("/"));
 
     this->LoadFileHistory();
+}
+
+void wxMarkDownEditormainFrame::LoadDefaultEditorStyles(wxStyledTextCtrl* editor) {
+    if (editor == nullptr) {
+        return;
+    }
+    editor->StyleClearAll();
+
+    const wxString& fontName = "Courier New";
+    int fontSize             = 10;
+    wxFont font(fontSize, wxFONTFAMILY_TELETYPE, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, fontName);
+    // set mono the all fonts
+    editor->StyleSetFont(wxSTC_STYLE_DEFAULT, wxFont(fontSize, wxFONTFAMILY_TELETYPE, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, fontName));
+
+    for (int i = 0; i < wxSTC_STYLE_LASTPREDEFINED; ++i) {
+        editor->StyleSetFont(i, wxFont(fontSize, wxFONTFAMILY_TELETYPE, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, fontName));
+    }
+
+    editor->StyleSetFont(wxSTC_STYLE_LINENUMBER, wxFont(fontSize, wxFONTFAMILY_TELETYPE, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, fontName));
+
+    // Set lexer for markdown syntax
+    editor->SetLexer(wxSTC_LEX_MARKDOWN);
+    editor->SetWrapMode(wxSTC_WRAP_WORD);
+    editor->SetWrapVisualFlags(wxSTC_WRAPVISUALFLAG_END);
+
+    // Format headers
+    editor->StyleSetForeground(wxSTC_MARKDOWN_HEADER1, *wxRED);
+    editor->StyleSetForeground(wxSTC_MARKDOWN_HEADER2, *wxBLUE);
+    editor->StyleSetForeground(wxSTC_MARKDOWN_HEADER3, *wxGREEN);
+
+    // Format code blocks
+    editor->StyleSetBackground(wxSTC_MARKDOWN_CODE, *wxLIGHT_GREY);
+    editor->StyleSetForeground(wxSTC_MARKDOWN_CODE, *wxBLACK);
+
+    // Format italic and bold text
+    editor->StyleSetBold(wxSTC_MARKDOWN_EM1, true);    // Italic text
+    editor->StyleSetItalic(wxSTC_MARKDOWN_EM2, true);  // Bold text
+
+    // Format links
+    editor->StyleSetForeground(wxSTC_MARKDOWN_LINK, *wxBLUE);
+    editor->StyleSetUnderline(wxSTC_MARKDOWN_LINK, true);  // Underlined links
+
+    // Format list items
+    editor->StyleSetForeground(wxSTC_MARKDOWN_OLIST_ITEM, *wxBLACK);
+    editor->StyleSetBackground(wxSTC_MARKDOWN_OLIST_ITEM, *wxLIGHT_GREY);
+
+    editor->StyleSetForeground(wxSTC_MARKDOWN_ULIST_ITEM, *wxBLACK);
+    editor->StyleSetBackground(wxSTC_MARKDOWN_ULIST_ITEM, *wxLIGHT_GREY);
+
+    // Format normal text (default)
+    editor->StyleSetForeground(wxSTC_MARKDOWN_DEFAULT, *wxBLACK);
+    editor->StyleSetBackground(wxSTC_MARKDOWN_DEFAULT, *wxWHITE);
+
+    // Other custom formatting
+    editor->StyleSetForeground(wxSTC_MARKDOWN_BLOCKQUOTE, wxColour(128, 128, 128));  // Grey color for blockquote
 }
