@@ -53,6 +53,7 @@ class mainFrame : public wxFrame
 		wxStatusBar* m_statusBar1;
 		wxMenuBar* mainMenuBar;
 		wxMenu* fileMenu;
+		wxMenu* m_open_recent;
 
 		// Virtual event handlers, override them in your derived class
 		virtual void OnSplitterSashPositionChanged( wxSplitterEvent& event ) { event.Skip(); }
@@ -60,6 +61,7 @@ class mainFrame : public wxFrame
 		virtual void OnEditorChar( wxKeyEvent& event ) { event.Skip(); }
 		virtual void OnEditorKeyDown( wxKeyEvent& event ) { event.Skip(); }
 		virtual void OnEditorKeyUp( wxKeyEvent& event ) { event.Skip(); }
+		virtual void OnNew( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnOpen( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnSave( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnSaveAs( wxCommandEvent& event ) { event.Skip(); }

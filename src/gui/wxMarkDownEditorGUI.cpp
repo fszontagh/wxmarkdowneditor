@@ -152,6 +152,15 @@ mainFrame::mainFrame( wxWindow* parent, wxWindowID id, const wxString& title, co
 	m_statusBar1 = this->CreateStatusBar( 1, wxSTB_SIZEGRIP, wxID_ANY );
 	mainMenuBar = new wxMenuBar( 0 );
 	fileMenu = new wxMenu();
+	wxMenuItem* m_newFile;
+	m_newFile = new wxMenuItem( fileMenu, wxID_NEW, wxString( _("&New") ) , wxEmptyString, wxITEM_NORMAL );
+	#ifdef __WXMSW__
+	m_newFile->SetBitmaps( wxNullBitmap, wxArtProvider::GetBitmap( wxASCII_STR(wxART_NEW), wxASCII_STR(wxART_MENU) ) );
+	#endif
+	fileMenu->Append( m_newFile );
+
+	fileMenu->AppendSeparator();
+
 	wxMenuItem* m_openFile;
 	m_openFile = new wxMenuItem( fileMenu, wxID_OPEN, wxString( _("&Open") ) , wxEmptyString, wxITEM_NORMAL );
 	#ifdef __WXMSW__
@@ -160,6 +169,16 @@ mainFrame::mainFrame( wxWindow* parent, wxWindowID id, const wxString& title, co
 	m_openFile->SetBitmap( wxArtProvider::GetBitmap( wxASCII_STR(wxART_FILE_OPEN), wxASCII_STR(wxART_MENU) ) );
 	#endif
 	fileMenu->Append( m_openFile );
+
+	m_open_recent = new wxMenu();
+	wxMenuItem* m_open_recentItem = new wxMenuItem( fileMenu, wxID_ANY, _("Open &recent..."), wxEmptyString, wxITEM_NORMAL, m_open_recent );
+	#if (defined( __WXMSW__ ) || defined( __WXGTK__ ) || defined( __WXOSX__ ))
+	m_open_recentItem->SetBitmap( wxArtProvider::GetBitmap( wxASCII_STR(wxART_FILE_OPEN), wxASCII_STR(wxART_MENU) ) );
+	#endif
+
+	fileMenu->Append( m_open_recentItem );
+
+	fileMenu->AppendSeparator();
 
 	wxMenuItem* m_save;
 	m_save = new wxMenuItem( fileMenu, wxID_SAVE, wxString( _("&Save") ) , wxEmptyString, wxITEM_NORMAL );
@@ -203,6 +222,7 @@ mainFrame::mainFrame( wxWindow* parent, wxWindowID id, const wxString& title, co
 	editor->Connect( wxEVT_CHAR, wxKeyEventHandler( mainFrame::OnEditorChar ), NULL, this );
 	editor->Connect( wxEVT_KEY_DOWN, wxKeyEventHandler( mainFrame::OnEditorKeyDown ), NULL, this );
 	editor->Connect( wxEVT_KEY_UP, wxKeyEventHandler( mainFrame::OnEditorKeyUp ), NULL, this );
+	fileMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( mainFrame::OnNew ), this, m_newFile->GetId());
 	fileMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( mainFrame::OnOpen ), this, m_openFile->GetId());
 	fileMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( mainFrame::OnSave ), this, m_save->GetId());
 	fileMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( mainFrame::OnSaveAs ), this, m_saveAs->GetId());
