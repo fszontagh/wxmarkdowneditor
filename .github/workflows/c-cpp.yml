@@ -24,7 +24,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt update
-          sudo apt install -y cmake g++ libwxgtk3.2-dev
+          sudo apt install -y cmake g++ libwxgtk3.2-dev wx3.2-headers wx3.2-i18n wx-common libwxgtk-webview3.2-dev
 
       - name: Install dependencies (Windows)
         if: runner.os == 'Windows'
