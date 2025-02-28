@@ -15,21 +15,25 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      
+
       - name: Install dependencies (Ubuntu)
         if: runner.os == 'Linux'
-        run: sudo apt update && sudo apt install -y cmake g++
-      
+        run: |
+          sudo apt update
+          sudo apt install -y cmake g++ libwxgtk3.2-dev
+
       - name: Install dependencies (Windows)
         if: runner.os == 'Windows'
-        run: choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' -y
-      
+        run: |
+          choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' -y
+          choco install wxwidgets -y
+
       - name: Configure CMake
         run: cmake -B build
-      
+
       - name: Build project
         run: cmake --build build --config Release
