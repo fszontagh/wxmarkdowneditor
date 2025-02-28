@@ -177,12 +177,14 @@ void wxMarkDownEditormainFrame::OnSaveAs(wxCommandEvent& event) {
     }
 }
 void wxMarkDownEditormainFrame::UpdatePreview(bool forceUpdate) {
-    const auto currentContent = this->editor->GetText();
+
 
     if (this->currentFile == nullptr) {
         return;
     }
 
+
+    const auto currentContent = this->currentFile->editor->GetText();
     if (this->currentFile->content == currentContent && !forceUpdate) {
         return;
     }
@@ -238,12 +240,9 @@ void wxMarkDownEditormainFrame::OnOpenFileActivated(wxDataViewEvent& event) {
         return;
     }
 
-    // this->currentFile = this->files.at(filename.GetAbsolutePath());
-    this->ChangeCurrentFile(this->files.at(filename.GetAbsolutePath()));
-
-    // this->UpdatePreview(true);
-    this->RequestPreviewUpdate();
-    this->SetTitle(this->currentFile->file.GetFullName() + " - wxMarkDownEditor");
+    if (this->ChangeCurrentFile(this->files.at(filename.GetAbsolutePath()))) {
+        this->RequestPreviewUpdate();
+    }
 }
 
 void wxMarkDownEditormainFrame::LoadStylesFromConfig(const wxString& paletteName) {
@@ -442,32 +441,28 @@ void wxMarkDownEditormainFrame::OpenFile(const wxString& fileName) {
 
             info->editor          = this->cloneEditor(this->editor);
             this->files[fileName] = std::move(info);
-            this->ChangeCurrentFile(this->files[fileName]);
+            if (this->ChangeCurrentFile(this->files[fileName])) {
+                this->config->Write("LastOpenFile", this->currentFile->file.GetFullPath());
+                this->config->Write("LastOpenFileDirectory", this->currentFile->file.GetPath());
 
-            wxSetWorkingDirectory(this->currentFile->file.GetPath());
+                wxVector<wxVariant> data;
+                data.push_back(wxVariant(this->currentFile->file.GetFullName()));
+                data.push_back(wxVariant(this->currentFile->GetTimeAgo()));
 
-            this->config->Write("LastOpenFile", this->currentFile->file.GetFullPath());
-            this->config->Write("LastOpenFileDirectory", this->currentFile->file.GetPath());
+                this->m_currentOpenFiles->AppendItem(data);
 
-            wxVector<wxVariant> data;
-            data.push_back(wxVariant(this->currentFile->file.GetFullName()));
-            data.push_back(wxVariant(this->currentFile->GetTimeAgo()));
+                auto viewItem = this->m_currentOpenFiles->RowToItem(this->m_currentOpenFiles->GetItemCount() - 1);
 
-            this->m_currentOpenFiles->AppendItem(data);
+                this->currentFile->item = viewItem;
 
-            auto viewItem = this->m_currentOpenFiles->RowToItem(this->m_currentOpenFiles->GetItemCount() - 1);
+                ItemData* itemData = new ItemData(this->currentFile->file);
+                this->m_currentOpenFiles->SetItemData(viewItem, itemData->GetData());
+                this->m_currentOpenFiles->SetCurrentItem(viewItem);
 
-            this->currentFile->item = viewItem;
-
-            ItemData* itemData = new ItemData(this->currentFile->file);
-            this->m_currentOpenFiles->SetItemData(viewItem, itemData->GetData());
-            this->m_currentOpenFiles->SetCurrentItem(viewItem);
-
-            // this->UpdatePreview();
-            this->RequestPreviewUpdate();
-            this->SetTitle(this->currentFile->file.GetFullName() + " - wxMarkDownEditor");
-            this->StoreFileHistory(this->currentFile->file.GetAbsolutePath());
-            this->m_statusBar1->SetStatusText(this->currentFile->file.GetFullName(), 0);
+                this->StoreFileHistory(this->currentFile->file.GetAbsolutePath());
+                this->m_statusBar1->SetStatusText(this->currentFile->file.GetFullName(), 0);
+                this->RequestPreviewUpdate();
+            }
         }
     }
 }

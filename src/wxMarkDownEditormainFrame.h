@@ -97,34 +97,30 @@ private:
 
         return cloned;
     };
-    inline void ChangeCurrentFile(std::shared_ptr<FileInfo> NewFile) {
+    inline bool ChangeCurrentFile(std::shared_ptr<FileInfo> NewFile) {
         if (NewFile == nullptr) {
-            return;
+            return false;
         }
-        if (this->currentFile == NewFile) {
-            return;
-        }
+
         if (this->currentFile) {
-            auto original = this->currentFile->editor;
-            auto cloned   = NewFile->editor;
-
-            original->Hide();
-
-            this->MarkDownPanel->GetSizer()->Detach(original);
-            this->MarkDownPanel->GetSizer()->Add(cloned, 1, wxEXPAND | wxALL, 5);
-
-            this->currentFile = NewFile;
-
-            if (this->currentFile->editor->GetText() != this->currentFile->content) {
-                this->currentFile->editor->SetText(this->currentFile->content);
+            if (this->currentFile == NewFile) {
+                return false;
             }
-
-            cloned->Show();
-            this->MarkDownPanel->Layout();
-
-        } else {
-            this->currentFile = NewFile;
+            this->MarkDownPanel->GetSizer()->Detach(this->currentFile->editor);
+            this->currentFile->editor->Hide();
         }
+        this->currentFile = NewFile;
+
+        this->MarkDownPanel->GetSizer()->Add(this->currentFile->editor, 1, wxEXPAND | wxALL, 5);
+        if (this->currentFile->editor->GetText() != this->currentFile->content) {
+            this->currentFile->editor->SetText(this->currentFile->content);
+        }
+        this->currentFile->editor->Show();
+        this->MarkDownPanel->Layout();
+
+        wxSetWorkingDirectory(this->currentFile->file.GetPath());
+        this->SetTitle(this->currentFile->file.GetFullName() + " - wxMarkDownEditor");
+        return true;
     };
 };
 
