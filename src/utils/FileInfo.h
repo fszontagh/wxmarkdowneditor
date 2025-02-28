@@ -1,7 +1,10 @@
 #ifndef FILEINFO_H
 #define FILEINFO_H
 
+#include <wx/dataview.h>
 #include <wx/filename.h>
+#include <wx/generic/panelg.h>
+#include <wx/stc/stc.h>
 #include <wx/timer.h>
 #include <functional>
 
@@ -12,14 +15,20 @@ struct FileInfo {
     };
     wxFileName file;
     wxTimer timer;
-    wxString content    = wxEmptyString;
-    wxString html       = wxEmptyString;
-    bool contentChanged = false;  // whether the content has changed by the user in the editor
-    wxEvtHandler* owner = nullptr;
+    wxString content         = wxEmptyString;
+    wxString html            = wxEmptyString;
+    bool contentChanged      = false;  // whether the content has changed by the user in the editor
+    wxEvtHandler* owner      = nullptr;
+    wxDataViewItem item      = wxDataViewItem();
+    wxStyledTextCtrl* editor = nullptr;  // use separated wxStyledTextCtrl for all files
 
     std::function<void(wxFileName, FileInfo::CallbackType)> callback = nullptr;
 
     wxDateTime lastModified;
+
+    wxString GetDisplayName() {
+        return this->contentChanged ? wxString::Format(wxT("*") + this->file.GetFullName()) : this->file.GetFullName();
+    }
 
     FileInfo(const wxFileName& file, wxEvtHandler* parentEvt)
         : file(file), owner(parentEvt) {
@@ -75,6 +84,7 @@ struct FileInfo {
             return lastModified.Format(_("%Y-%m-%d %H:%M"));
         }
     }
+
 };
 
 #endif  // FILEINFO_H

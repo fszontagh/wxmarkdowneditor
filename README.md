@@ -1,51 +1,55 @@
-# wxMarkDown editor
-A simple MarkDown Editor written in C++ using
+# wxMarkDown Editor
 
--  [wxWidgets](https://github.com/wxWidgets/wxWidgets) 
-- [maddy](https://github.com/progsource/maddy) markdown parser
+A lightweight yet powerful Markdown editor written in C++ using:
 
-## Features
-- Live preview
-- simple syntax highliting
-- customizable themes
-- fast and lightweight, minimal dependencies
-- Unix and Windows compatible
+- [wxWidgets](https://github.com/wxWidgets/wxWidgets) – cross-platform GUI library
+- [cmark](https://github.com/commonmark/cmark) – efficient Markdown parser
 
-__For the list of the supported markdown definitions, please visit [maddy project page](https://github.com/progsource/maddy/blob/master/docs/definitions.md)__
+## ✨ Features
 
-## Build from source
-### Requirements
-- a compiled version of `wxWidgets with` compatibility 3.2.1+
-- cmake
-- modern compiler
+- **Live Preview** – See the formatted output as you type
+- **Syntax Highlighting** – Enhanced readability for Markdown syntax
+- **Customizable Themes** – Adapt the editor to your style
+- **Fast & Lightweight** – Minimal dependencies, optimized performance
+- **Cross-Platform** – Works on both Unix and Windows
 
 
-1. Clone the repository
+## 🔧 Build from Source
 
+### 📜 Requirements
 
-```
-git clone https://github.com/fszontagh/wxmarkdowneditor.git
-```
+- wxWidgets (version **3.2.1+** required)
+- CMake
+- A modern C++ compiler
 
-2. Create a build dir:
+### 🛠️ Compilation Steps
 
-```
-mkdir wxmarkdowneditor/build; cd wxmarkdowneditor/build
-```
+1. **Clone the repository**
 
+   ```sh
+   git clone https://github.com/fszontagh/wxmarkdowneditor.git
+   ```
 
-3. Configure
+2. **Create and enter the build directory**
 
+   ```sh
+   mkdir wxmarkdowneditor/build && cd wxmarkdowneditor/build
+   ```
 
-```
-cmake ..
-```
+3. **Configure the project**
 
-4. Build
+   ```sh
+   cmake ..
+   ```
 
+4. **Build the executable**
 
-```
-cmake --build ..
-```
+   ```sh
+   cmake --build .
+   ```
 
-## Sample screenshots
+## 🖼️ Sample Screenshots
+
+*(Include some screenshots here to showcase the UI and features)*
+## 📄 License
+This project is licensed under the [MIT License](LICENSE).

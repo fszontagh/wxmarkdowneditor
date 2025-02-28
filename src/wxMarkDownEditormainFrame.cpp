@@ -54,14 +54,6 @@ wxMarkDownEditormainFrame::wxMarkDownEditormainFrame(wxWindow* parent)
     // Other custom formatting
     this->editor->StyleSetForeground(wxSTC_MARKDOWN_BLOCKQUOTE, wxColour(128, 128, 128));  // Grey color for blockquote
 
-    // prepare the parser
-    this->parserConfig = std::make_shared<maddy::ParserConfig>();
-    // config->isEmphasizedParserEnabled = false; // default true - this flag is deprecated
-    // config->isHTMLWrappedInParagraph = false; // default true - this flag is deprecated
-    // this->parserConfig->enabledParsers &= ~maddy::types::EMPHASIZED_PARSER;  // equivalent to !isEmphasizedParserEnabled
-    this->parserConfig->enabledParsers |= maddy::types::HTML_PARSER;  // equivalent to !isHTMLWrappedInParagraph
-
-    this->parser     = std::make_shared<maddy::Parser>(this->parserConfig);
     auto splitterPos = this->config->Read("/SplitterPosition/m_splitter1", 300);
     this->m_splitter1->SetSashPosition(splitterPos);
 
@@ -74,17 +66,14 @@ wxMarkDownEditormainFrame::wxMarkDownEditormainFrame(wxWindow* parent)
 
     // prepare the update thread
     Bind(EVT_UPDATE_PREVIEW, &wxMarkDownEditormainFrame::OnUpdatePreview, this);
-    updateThread = new PreviewUpdateThread(this);
-    if (updateThread->Run() != wxTHREAD_NO_ERROR) {
-        wxLogError("Nem sikerült elindítani az előnézet frissítő szálat!");
-        delete updateThread;
-        updateThread = nullptr;
-    }
+    updateThread = new PreviewUpdateThread(this->GetEventHandler());
+    updateThread->Start();
+    this->LoadFileHistory();
 }
 
 wxMarkDownEditormainFrame::~wxMarkDownEditormainFrame() {
     if (updateThread) {
-        updateThread->Delete();
+        updateThread->Stop();
         delete updateThread;
         updateThread = nullptr;
     }
@@ -99,30 +88,20 @@ wxMarkDownEditormainFrame::~wxMarkDownEditormainFrame() {
     delete this->config;
 }
 void wxMarkDownEditormainFrame::OnEditorChar(wxKeyEvent& event) {
-    // this->UpdatePreview();
-    // this->RequestPreviewUpdate();
+    this->currentFile->contentChanged = true;
     event.Skip();
 }
 
 void wxMarkDownEditormainFrame::OnEditorKeyDown(wxKeyEvent& event) {
-    // this->UpdatePreview();
+    this->currentFile->contentChanged = true;
     this->RequestPreviewUpdate();
     event.Skip();
 }
 
 void wxMarkDownEditormainFrame::OnEditorKeyUp(wxKeyEvent& event) {
-    // this->UpdatePreview();
-    // this->RequestPreviewUpdate();
+    this->currentFile->contentChanged = true;
     event.Skip();
 }
-
-/*void wxMarkDownEditormainFrame::OnHtmlLinkClicked(wxHtmlLinkEvent& event) {
-    wxString url = event.GetLinkInfo().GetHref();
-    wxString msg = wxString::Format(_("Do you want to open this URL?\n%s"), url);
-    if (wxMessageBox(msg, _("Open URL"), wxYES_NO | wxICON_QUESTION) == wxYES) {
-        wxLaunchDefaultBrowser(url);
-    }
-}*/
 
 void wxMarkDownEditormainFrame::OnOpen(wxCommandEvent& event) {
     wxString filename = wxFileSelector(_("Open File"), wxEmptyString, wxEmptyString, wxEmptyString, _("Markdown Files (*.md)|*.md"), wxFD_OPEN | wxFD_FILE_MUST_EXIST);
@@ -159,7 +138,13 @@ void wxMarkDownEditormainFrame::OnSave(wxCommandEvent& event) {
             file.Close();
             this->currentFile->contentChanged = false;
             wxSetWorkingDirectory(this->currentFile->file.GetPath());
+            this->SetStatusText(_("Saved to ") + this->currentFile->file.GetFullPath());
+
+            auto row = this->m_currentOpenFiles->ItemToRow(this->currentFile->item);
+            this->m_currentOpenFiles->SetTextValue(this->currentFile->GetDisplayName(), row, 0);
         }
+    } else {
+        this->SetStatusText(_("File is not changed, no need to save"));
     }
 }
 void wxMarkDownEditormainFrame::OnSaveAs(wxCommandEvent& event) {
@@ -186,6 +171,8 @@ void wxMarkDownEditormainFrame::OnSaveAs(wxCommandEvent& event) {
             file.Close();
             this->currentFile->contentChanged = false;
             wxSetWorkingDirectory(this->currentFile->file.GetPath());
+            auto row = this->m_currentOpenFiles->ItemToRow(this->currentFile->item);
+            this->m_currentOpenFiles->SetTextValue(this->currentFile->GetDisplayName(), row, 0);
         }
     }
 }
@@ -201,12 +188,15 @@ void wxMarkDownEditormainFrame::UpdatePreview(bool forceUpdate) {
     }
 
     this->currentFile->content = wxString(currentContent);
+    auto str                   = currentContent.utf8_string();
+    cmark_node* root           = cmark_parse_document(str.c_str(), str.size(), CMARK_OPT_DEFAULT);
+    char* html                 = cmark_render_html(root, CMARK_OPT_DEFAULT | CMARK_OPT_VALIDATE_UTF8);
 
-    /* wxWidgets 3.1.1+ */
-    std::stringstream markdownInput(std::string(currentContent.utf8_string()));
-    std::string htmlOutput = parser->Parse(markdownInput);
-    /* wxWidgets 3.0.4- */
-    wxString wxHtmlOutput = wxString::FromUTF8(htmlOutput.c_str());
+    wxString wxHtmlOutput = wxString::FromUTF8(html);
+
+    cmark_node_free(root);
+
+    free(html);
 
     wxString cssFilePath = this->currentCssFile;
     wxString cssLink;
@@ -216,12 +206,14 @@ void wxMarkDownEditormainFrame::UpdatePreview(bool forceUpdate) {
     } else {
         cssLink = "<style type=\"text/css\">" + defaultCss + "</style>";
     }
-    this->currentFile->html           = wxString::Format("<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\"><html><head>%s</head><body>%s</body></html>", cssLink, wxHtmlOutput);
-    this->currentFile->contentChanged = true;
+
+    this->currentFile->html = wxString::Format("<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\"><html><head>%s</head><body>%s</body></html>", cssLink, wxHtmlOutput);
 
     this->webView->SetPage(this->currentFile->html, "file://");
 
-    this->LoadFileHistory();
+    // mark the file in the list as changed
+    auto row = this->m_currentOpenFiles->ItemToRow(this->currentFile->item);
+    this->m_currentOpenFiles->SetTextValue(this->currentFile->GetDisplayName(), row, 0);
 }
 void wxMarkDownEditormainFrame::OnSplitterSashPositionChanged(wxSplitterEvent& event) {
     // this->config->Write("SplitterPosition/m_splitter1", this->m_splitter1->GetSashPosition());
@@ -245,10 +237,9 @@ void wxMarkDownEditormainFrame::OnOpenFileActivated(wxDataViewEvent& event) {
     if (this->currentFile == this->files.at(filename.GetAbsolutePath())) {
         return;
     }
-    this->currentFile = this->files.at(filename.GetAbsolutePath());
 
-    wxString content = this->currentFile->content;
-    this->editor->SetText(content);
+    // this->currentFile = this->files.at(filename.GetAbsolutePath());
+    this->ChangeCurrentFile(this->files.at(filename.GetAbsolutePath()));
 
     // this->UpdatePreview(true);
     this->RequestPreviewUpdate();
@@ -429,17 +420,29 @@ void wxMarkDownEditormainFrame::OnWebViewNavigating(wxWebViewEvent& event) {
 }
 void wxMarkDownEditormainFrame::OpenFile(const wxString& fileName) {
     if (!fileName.IsEmpty()) {
+        // check if the file already open
+        for (const auto& file : this->files) {
+            if (file.second->file.GetFullPath() == fileName) {
+                this->m_currentOpenFiles->Select(file.second->item);
+                // simuliate the "Activate" event
+                wxDataViewEvent event(wxEVT_DATAVIEW_ITEM_ACTIVATED, this->m_currentOpenFiles, file.second->item);
+                this->m_currentOpenFiles->ProcessWindowEvent(event);
+                return;
+            }
+        }
         wxFile file;
         if (file.Open(fileName)) {
             wxString content;
             file.ReadAll(&content);
-            this->editor->SetText(content);
             file.Close();
 
-            auto info = std::make_shared<FileInfo>(fileName, this->GetEventHandler());
+            std::shared_ptr<FileInfo> info = std::make_shared<FileInfo>(fileName, this->GetEventHandler());
             info->SetCallback(std::bind(&wxMarkDownEditormainFrame::UpdateOpenedFileInfo, this, std::placeholders::_1, std::placeholders::_2));
-            this->currentFile                         = info;
-            this->files[info->file.GetAbsolutePath()] = std::move(info);
+            info->content = content;
+
+            info->editor          = this->cloneEditor(this->editor);
+            this->files[fileName] = std::move(info);
+            this->ChangeCurrentFile(this->files[fileName]);
 
             wxSetWorkingDirectory(this->currentFile->file.GetPath());
 
@@ -454,6 +457,8 @@ void wxMarkDownEditormainFrame::OpenFile(const wxString& fileName) {
 
             auto viewItem = this->m_currentOpenFiles->RowToItem(this->m_currentOpenFiles->GetItemCount() - 1);
 
+            this->currentFile->item = viewItem;
+
             ItemData* itemData = new ItemData(this->currentFile->file);
             this->m_currentOpenFiles->SetItemData(viewItem, itemData->GetData());
             this->m_currentOpenFiles->SetCurrentItem(viewItem);
@@ -462,6 +467,7 @@ void wxMarkDownEditormainFrame::OpenFile(const wxString& fileName) {
             this->RequestPreviewUpdate();
             this->SetTitle(this->currentFile->file.GetFullName() + " - wxMarkDownEditor");
             this->StoreFileHistory(this->currentFile->file.GetAbsolutePath());
+            this->m_statusBar1->SetStatusText(this->currentFile->file.GetFullName(), 0);
         }
     }
 }
@@ -480,7 +486,10 @@ void wxMarkDownEditormainFrame::UpdateOpenedFileInfo(const wxFileName& file, Fil
             }
 
             this->m_currentOpenFiles->SetTextValue(info->GetTimeAgo(), i, 1);
-            if (callback == FileInfo::CallbackType::CHANGED) {
+            this->m_currentOpenFiles->SetTextValue(info->GetDisplayName(), i, 0);
+
+            // TODO: if the file is the current selected, ask user to load the new content amd if the file is not selected, but changed in the editor and chagnged externally, ask user to load the new content or overwrite the changes
+            if (callback == FileInfo::CallbackType::CHANGED && this->currentFile->file.GetAbsolutePath() == file.GetFullPath()) {
                 // re-read the file contents and check if differ from the editor's content
                 wxString content;
                 wxFile file;
@@ -532,8 +541,47 @@ void wxMarkDownEditormainFrame::LoadFileHistory() {
     this->historyMenuItems.clear();
 
     for (const auto file : this->fileHistory) {
-        wxMenuItem* menuItem = wxMenuItem::New(this->m_open_recent, wxID_OPEN, file, wxString::Format(_("Open recent file: %s"), file), wxITEM_NORMAL);
+        wxMenuItem* menuItem = wxMenuItem::New(this->m_open_recent, wxID_ANY, wxFileName(file).GetFullName(), wxString::Format(_("Open recent file: %s"), file), wxITEM_NORMAL);
+        this->m_open_recent->Append(menuItem);
         this->historyMenuItems.push_back(std::move(menuItem));
     }
 }
-m
+
+void wxMarkDownEditormainFrame::StoreFileHistory(const wxString& filePath) {
+    if (!config || filePath.IsEmpty())
+        return;
+
+    wxString historyGroup = wxT("/FileHistory");
+    config->SetPath(historyGroup);
+
+    std::vector<wxString> tempHistory;
+    size_t count = config->ReadLong("Count", 0);
+
+    for (size_t i = 0; i < count; i++) {
+        wxString key = wxString::Format("File%zu", i);
+        wxString value;
+        if (config->Read(key, &value) && wxFileExists(value)) {
+            tempHistory.push_back(value);
+        }
+    }
+
+    tempHistory.erase(std::remove(tempHistory.begin(), tempHistory.end(), filePath), tempHistory.end());
+
+    tempHistory.insert(tempHistory.begin(), filePath);
+
+    size_t maxHistory = this->config->ReadLong("MaxHistory", 10);
+
+    if (tempHistory.size() > maxHistory) {
+        tempHistory.resize(maxHistory);
+    }
+
+    config->Write("Count", (long)tempHistory.size());
+    for (size_t i = 0; i < tempHistory.size(); i++) {
+        config->Write(wxString::Format("File%zu", i), tempHistory[i]);
+    }
+
+    config->Flush();
+    config->SetPath(wxT("/"));
+
+    this->LoadFileHistory();
+}

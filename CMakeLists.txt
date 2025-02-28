@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(BUILD_SHARED_LIBS OFF)
 
 project(
     wxmarkdowneditor
@@ -28,12 +29,7 @@ message(STATUS "wxWidgets libraries: ${wxWidgets_LIBRARIES}")
 
 include(FetchContent)
 
-FetchContent_Declare(
-  maddy
-  URL https://github.com/progsource/maddy/releases/download/1.3.0/maddy-src.zip
-  DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-)
-FetchContent_MakeAvailable(maddy)
+add_subdirectory(third_party/cmark)
 
 configure_file(res/gui.xrc ${CMAKE_BINARY_DIR} COPYONLY)
 
@@ -45,4 +41,4 @@ endif()
 add_executable(${CMAKE_PROJECT_NAME} src/main.cpp src/gui/wxMarkDownEditorGUI.cpp src/wxMarkDownEditormainFrame.cpp)
 
 # Link wxWidgets libraries explicitly
-target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ${wxWidgets_LIBRARIES} maddy)
+target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ${wxWidgets_LIBRARIES} cmark)
