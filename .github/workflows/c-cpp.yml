@@ -43,13 +43,13 @@ jobs:
           cd cmark-gfm
           mkdir build
           cd build
-          cmake .. -DCMAKE_INSTALL_PREFIX=C:/cmark-gfm -DCMAKE_BUILD_TYPE=Release
+          cmake .. -DCMAKE_INSTALL_PREFIX=C:/cmark-gfm -DCMAKE_BUILD_TYPE=Release -DCMARK_TESTS=OFF -DCMARK_STATIC=ON -DCMARK_SHARED=OFF
           cmake --build . --config Release --target install
 
       - name: Configure CMake
         run: cmake -B build
         env:
-          CMAKE_PREFIX_PATH: C:/cmark-gfm  # Windows alatt a saját fordított cmark-gfm-et keresi
+          CMAKE_PREFIX_PATH: C:/cmark-gfm
 
       - name: Build project
         run: cmake --build build --config Release
