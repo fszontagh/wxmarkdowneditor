@@ -47,9 +47,14 @@ jobs:
           cmake --build . --config Release --target install
 
       - name: Configure CMake
-        run: cmake -B build
+        if: runner.os == 'Windows'
+        run: cmake -B build -DWXWIDGETS_PATH=C:/wxWidgets-3.1.2 -DCMAKE_BUILD_TYPE=Release
         env:
           CMAKE_PREFIX_PATH: C:/cmark-gfm
+
+      - name: Configure CMake
+        if: runner.os == 'Linux'
+        run: cmake -B build
 
       - name: Build project
         run: cmake --build build --config Release
