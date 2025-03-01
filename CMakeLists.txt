@@ -15,10 +15,11 @@ set(WXWIDGETS_PATH "" CACHE PATH "Path to the wxWidgets installation")
 
 if (WXWIDGETS_PATH)
     message(STATUS "Looking for wxWidgets in: ${wxWidgets_DIR}")
-    find_package(wxWidgets REQUIRED COMPONENTS core base stc xml xrc webview
+    find_package(wxWidgets REQUIRED core base stc xml xrc webview
     HINTS ${WXWIDGETS_PATH}/lib/cmake/wxWidgets)
 else()
-    find_package(wxWidgets REQUIRED COMPONENTS core base stc xml xrc webview)
+    find_package(wxWidgets REQUIRED gl core base stc webview OPTIONAL_COMPONENTS net)
+    include(${wxWidgets_USE_FILE})
 endif()
 
 # Debugging output to check the linked libraries
@@ -33,7 +34,7 @@ add_subdirectory(third_party/cmark-gfm)
 
 
 # Configure file for wxWidgets
-configure_file(res/gui.xrc ${CMAKE_BINARY_DIR} COPYONLY)
+#configure_file(res/gui.xrc ${CMAKE_BINARY_DIR} COPYONLY)
 
 if (wxWidgets_FOUND AND wxWidgets_USE_FILE)
     include(${wxWidgets_USE_FILE})
