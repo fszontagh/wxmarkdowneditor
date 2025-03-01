@@ -25,28 +25,23 @@ endif()
 # Debugging output to check the linked libraries
 message(STATUS "wxWidgets libraries: ${wxWidgets_LIBRARIES}")
 
-set(CMARK_TESTS  OFF)
-set(CMARK_SHARED  OFF)
-set(CMARK_STATIC  ON)
-add_subdirectory(third_party/cmark-gfm)
-
-# Include cmark-gfm headers
-
-
-# Configure file for wxWidgets
-#configure_file(res/gui.xrc ${CMAKE_BINARY_DIR} COPYONLY)
-
 if (wxWidgets_FOUND AND wxWidgets_USE_FILE)
     include(${wxWidgets_USE_FILE})
 endif()
 
-find_library(CMARK_GFM_LIB
-    NAMES ${CMAKE_STATIC_LIBRARY_PREFIX}cmark-gfm${CMAKE_STATIC_LIBRARY_SUFFIX}
-    PATHS ${CMAKE_BINARY_DIR}/third_party/cmark-gfm/src)
+find_package(PkgConfig REQUIRED)
 
-    find_library(CMARK_GFM_LIB_EXTENSIONS
-    NAMES ${CMAKE_STATIC_LIBRARY_PREFIX}cmark-gfm-extensions${CMAKE_STATIC_LIBRARY_SUFFIX}
-    PATHS ${CMAKE_BINARY_DIR}/third_party/cmark-gfm/extensions)
+
+pkg_check_modules(CMARK_GFM REQUIRED libcmark-gfm)
+
+string(FIND "${CMARK_GFM_LIBRARIES}" "cmark-gfm-extensions" CMARK_EXT_FOUND)
+if(CMARK_EXT_FOUND EQUAL -1)
+    message(FATAL_ERROR "libcmark-gfm-extensions not found!")
+endif()
+
+include_directories(${CMARK_GFM_INCLUDE_DIRS})
+link_directories(${CMARK_GFM_LIBRARY_DIRS})
+add_definitions(${CMARK_GFM_CFLAGS_OTHER})
 
 # Add the executable
 add_executable(${CMAKE_PROJECT_NAME} src/main.cpp src/gui/wxMarkDownEditorGUI.cpp src/wxMarkDownEditormainFrame.cpp)
@@ -54,4 +49,4 @@ add_executable(${CMAKE_PROJECT_NAME} src/main.cpp src/gui/wxMarkDownEditorGUI.cp
 target_include_directories(${CMAKE_PROJECT_NAME} PUBLIC third_party/cmark-gfm/src third_party/cmark-gfm/extensions ${CMAKE_BINARY_DIR}/third_party/cmark-gfm/src)
 
 # Link wxWidgets and cmark-gfm libraries
-target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ${wxWidgets_LIBRARIES} ${CMARK_GFM_LIB} ${CMARK_GFM_LIB_EXTENSIONS})
+target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ${wxWidgets_LIBRARIES} ${CMARK_GFM_LIBRARIES})

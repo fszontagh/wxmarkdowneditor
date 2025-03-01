@@ -19,12 +19,16 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          submodules: 'true'
 
       - name: Install dependencies (Ubuntu)
         if: runner.os == 'Linux'
         run: |
           sudo apt update
-          sudo apt install -y cmake g++ libwxgtk3.2-dev wx3.2-headers wx3.2-i18n wx-common libwxgtk-webview3.2-dev libwxgtk-media3.2-dev libwxgtk-webview3.2-dev
+          sudo apt install -y cmake g++ libwxgtk3.2-dev wx3.2-headers wx3.2-i18n wx-common \
+                              libwxgtk-webview3.2-dev libwxgtk-media3.2-dev libwxgtk-webview3.2-dev \
+                              libcmark-gfm-dev libcmark-gfm-extensions-dev
 
       - name: Install dependencies (Windows)
         if: runner.os == 'Windows'
@@ -32,8 +36,20 @@ jobs:
           choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' -y
           choco install wxwidgets -y
 
+      - name: Build and install cmark-gfm (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          git clone --recursive https://github.com/github/cmark-gfm.git
+          cd cmark-gfm
+          mkdir build
+          cd build
+          cmake .. -DCMAKE_INSTALL_PREFIX=C:/cmark-gfm -DCMAKE_BUILD_TYPE=Release
+          cmake --build . --config Release --target install
+
       - name: Configure CMake
         run: cmake -B build
+        env:
+          CMAKE_PREFIX_PATH: C:/cmark-gfm  # Windows alatt a saját fordított cmark-gfm-et keresi
 
       - name: Build project
         run: cmake --build build --config Release
