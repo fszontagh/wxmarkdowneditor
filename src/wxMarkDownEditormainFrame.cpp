@@ -7,7 +7,6 @@
 #include <wx/stdpaths.h>
 
 #include "gui/defaultCss.h"
-#include "registry.h"
 #include "utils/ItemData.h"
 
 wxMarkDownEditormainFrame::wxMarkDownEditormainFrame(wxWindow* parent)
