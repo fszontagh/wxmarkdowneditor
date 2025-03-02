@@ -46,7 +46,7 @@ jobs:
 
       - name: Build wxWidgets from source
         run: |
-          git clone --branch v3.2.6 --depth 1 https://github.com/wxWidgets/wxWidgets.git ${{ github.workspace }}/wxWidgets
+          git clone --branch v3.2.6 --recursive https://github.com/wxWidgets/wxWidgets.git ${{ github.workspace }}/wxWidgets
           cd ${{ github.workspace }}/wxWidgets
           mkdir -p local_build
           cd local_build
