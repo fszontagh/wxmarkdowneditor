@@ -38,7 +38,7 @@ jobs:
         run: |
           git clone --branch v3.2.6 --depth 1 https://github.com/wxWidgets/wxWidgets.git wxWidgets
           cd wxWidgets
-          mkdir build
+          mkdir -p build
           cd build
           cmake .. -DCMAKE_INSTALL_PREFIX=$PWD/../install -DCMAKE_BUILD_TYPE=Release -DwxBUILD_SHARED=OFF -DwxBUILD_TESTS=OFF
           cmake --build . --config Release --target install
@@ -47,7 +47,7 @@ jobs:
         run: |
           git clone --recursive https://github.com/github/cmark-gfm.git cmark-gfm
           cd cmark-gfm
-          mkdir build
+          mkdir -p build
           cd build
           cmake .. -DCMAKE_INSTALL_PREFIX=$PWD/../install -DCMAKE_BUILD_TYPE=Release -DCMARK_TESTS=OFF -DCMARK_STATIC=ON -DCMARK_SHARED=OFF
           cmake --build . --config Release --target install
