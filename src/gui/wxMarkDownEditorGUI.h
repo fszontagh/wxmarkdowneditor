@@ -12,11 +12,12 @@
 #include <wx/cshelp.h>
 #include <wx/intl.h>
 #include <wx/string.h>
-#include <wx/dataview.h>
+#include <wx/stattext.h>
 #include <wx/gdicmn.h>
 #include <wx/font.h>
 #include <wx/colour.h>
 #include <wx/settings.h>
+#include <wx/dataview.h>
 #include <wx/sizer.h>
 #include <wx/panel.h>
 #include <wx/stc/stc.h>
@@ -42,6 +43,7 @@ class mainFrame : public wxFrame
 	protected:
 		wxSplitterWindow* m_splitter1;
 		wxPanel* m_panel4;
+		wxStaticText* m_staticText1;
 		wxDataViewListCtrl* m_currentOpenFiles;
 		wxDataViewColumn* m_dataViewListColumn1;
 		wxDataViewColumn* m_dataViewListColumn2;

@@ -36,14 +36,20 @@ mainFrame::mainFrame( wxWindow* parent, wxWindowID id, const wxString& title, co
 	wxBoxSizer* bSizer1;
 	bSizer1 = new wxBoxSizer( wxHORIZONTAL );
 
-	m_splitter1 = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D );
+	m_splitter1 = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D|wxBORDER_NONE );
 	m_splitter1->SetSashGravity( 0.5 );
 	m_splitter1->Connect( wxEVT_IDLE, wxIdleEventHandler( mainFrame::m_splitter1OnIdle ), NULL, this );
 	m_splitter1->SetMinimumPaneSize( 200 );
 
-	m_panel4 = new wxPanel( m_splitter1, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	m_panel4 = new wxPanel( m_splitter1, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE|wxTAB_TRAVERSAL );
 	wxBoxSizer* bSizer5;
 	bSizer5 = new wxBoxSizer( wxVERTICAL );
+
+	m_staticText1 = new wxStaticText( m_panel4, wxID_ANY, _("Open Files"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER_HORIZONTAL|wxST_NO_AUTORESIZE );
+	m_staticText1->Wrap( -1 );
+	m_staticText1->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString ) );
+
+	bSizer5->Add( m_staticText1, 0, wxALL|wxEXPAND, 5 );
 
 	m_currentOpenFiles = new wxDataViewListCtrl( m_panel4, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxDV_ROW_LINES );
 	m_dataViewListColumn1 = m_currentOpenFiles->AppendTextColumn( _("Name"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE );
@@ -54,7 +60,7 @@ mainFrame::mainFrame( wxWindow* parent, wxWindowID id, const wxString& title, co
 	m_panel4->SetSizer( bSizer5 );
 	m_panel4->Layout();
 	bSizer5->Fit( m_panel4 );
-	m_panel5 = new wxPanel( m_splitter1, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	m_panel5 = new wxPanel( m_splitter1, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE|wxTAB_TRAVERSAL );
 	wxBoxSizer* bSizer7;
 	bSizer7 = new wxBoxSizer( wxVERTICAL );
 
@@ -65,7 +71,7 @@ mainFrame::mainFrame( wxWindow* parent, wxWindowID id, const wxString& title, co
 	m_notebook1->AssignImageList( m_notebook1Images );
 	wxBitmap m_notebook1Bitmap;
 	wxImage m_notebook1Image;
-	MarkDownPanel = new wxPanel( m_notebook1, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL, wxT("TabMarkdown") );
+	MarkDownPanel = new wxPanel( m_notebook1, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE|wxTAB_TRAVERSAL, wxT("TabMarkdown") );
 	wxBoxSizer* bSizer2;
 	bSizer2 = new wxBoxSizer( wxVERTICAL );
 
@@ -122,7 +128,7 @@ mainFrame::mainFrame( wxWindow* parent, wxWindowID id, const wxString& title, co
 		m_notebook1->SetPageImage( m_notebook1Index, m_notebook1Index );
 		m_notebook1Index++;
 	}
-	m_panel3 = new wxPanel( m_notebook1, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL, wxT("TabHtml") );
+	m_panel3 = new wxPanel( m_notebook1, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE|wxTAB_TRAVERSAL, wxT("TabHtml") );
 	bSizer4 = new wxBoxSizer( wxVERTICAL );
 
 

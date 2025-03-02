@@ -1,6 +1,5 @@
 #include "wxMarkDownEditormainFrame.h"
 
-
 #include <wx/filedlg.h>
 #include <wx/log.h>
 #include <wx/msgdlg.h>
@@ -9,40 +8,34 @@
 #include "gui/defaultCss.h"
 #include "utils/ItemData.h"
 
-wxMarkDownEditormainFrame::wxMarkDownEditormainFrame(wxWindow* parent)
-    : mainFrame(parent) {
-    this->config = new wxConfig("wxMarkDownEditor");
-
+wxMarkDownEditormainFrame::wxMarkDownEditormainFrame(wxWindow* parent, wxConfig* config)
+    : mainFrame(parent), config(config) {
+    this->SetTitle(wxT("wxMarkdown Editor"));
     this->enable_gfm_extensions(this->parser);
-
 
     this->webView = wxWebView::New(m_panel3, wxID_ANY, "about:blank", wxDefaultPosition, wxDefaultSize);
     this->webView->Connect(wxEVT_WEBVIEW_NAVIGATING, wxWebViewEventHandler(wxMarkDownEditormainFrame::OnWebViewNavigating), nullptr, this);
 
-    // webView->LoadURL("file:///path/to/your/html/file.html");
-
-    // htmlPreview = new wxHtmlWindow( m_panel3, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxHW_SCROLLBAR_AUTO );
     this->bSizer4->Add(this->webView, 1, wxALL | wxEXPAND, 5);
 
     auto splitterPos = this->config->Read("/SplitterPosition/m_splitter1", 300);
     this->m_splitter1->SetSashPosition(splitterPos);
 
-    auto cfg = wxStandardPaths::Get().GetUserDataDir();
+    auto cfg = wxStandardPaths::Get().GetUserDataDir() + "Data";
     if (!wxDirExists(cfg)) {
         wxMkdir(cfg);
     }
-    wxFileName configFilePath(cfg, "wxMarkDownEditorThemes.ini");
-    this->CreateDefaultConfigFile(configFilePath.GetFullPath());
 
     // prepare the update thread
     Bind(EVT_UPDATE_PREVIEW, &wxMarkDownEditormainFrame::OnUpdatePreview, this);
     updateThread = new PreviewUpdateThread(this->GetEventHandler());
     updateThread->Start();
     this->LoadFileHistory();
+
+    wxPersistentRegisterAndRestore(this, this->GetName());
 }
 
 wxMarkDownEditormainFrame::~wxMarkDownEditormainFrame() {
-    cmark_parser_free(this->parser);
     if (updateThread) {
         updateThread->Stop();
         delete updateThread;
@@ -55,22 +48,28 @@ wxMarkDownEditormainFrame::~wxMarkDownEditormainFrame() {
         delete olditem;
     }
     this->historyMenuItems.clear();
-
-    delete this->config;
+    cmark_parser_free(this->parser);
 }
 void wxMarkDownEditormainFrame::OnEditorChar(wxKeyEvent& event) {
-    this->currentFile->contentChanged = true;
+    if (this->currentFile->editor->GetText() != this->currentFile->content) {
+        this->currentFile->contentChanged = true;
+    }
+
     event.Skip();
 }
 
 void wxMarkDownEditormainFrame::OnEditorKeyDown(wxKeyEvent& event) {
-    this->currentFile->contentChanged = true;
+    if (this->currentFile->editor->GetText() != this->currentFile->content) {
+        this->currentFile->contentChanged = true;
+    }
     this->RequestPreviewUpdate();
     event.Skip();
 }
 
 void wxMarkDownEditormainFrame::OnEditorKeyUp(wxKeyEvent& event) {
-    this->currentFile->contentChanged = true;
+    if (this->currentFile->editor->GetText() != this->currentFile->content) {
+        this->currentFile->contentChanged = true;
+    }
     event.Skip();
 }
 
@@ -160,9 +159,8 @@ void wxMarkDownEditormainFrame::UpdatePreview(bool forceUpdate) {
     this->currentFile->content = wxString(currentContent);
     auto str                   = currentContent.utf8_string();
 
-
     cmark_node* root = cmark_parse_document(str.c_str(), str.size(), CMARK_OPT_DEFAULT);
-    char *html = cmark_render_html(root, CMARK_OPT_DEFAULT | CMARK_OPT_UNSAFE, cmark_parser_get_syntax_extensions(this->parser));
+    char* html       = cmark_render_html(root, CMARK_OPT_DEFAULT | CMARK_OPT_UNSAFE, cmark_parser_get_syntax_extensions(this->parser));
 
     wxString wxHtmlOutput = wxString::FromUTF8(html);
 
@@ -216,7 +214,7 @@ void wxMarkDownEditormainFrame::OnOpenFileActivated(wxDataViewEvent& event) {
 }
 
 void wxMarkDownEditormainFrame::LoadStylesFromConfig(const wxString& paletteName, wxStyledTextCtrl* editor) {
-    wxConfig* config = new wxConfig("wxMarkDownEditor", "", "editor_style.ini");
+    // wxConfig* config = new wxConfig("wxMarkDownEditor", "", "editor_style.ini");
 
     if (!config) {
         wxLogError("Unable to load configuration.");
@@ -270,13 +268,8 @@ void wxMarkDownEditormainFrame::OnPaletteChange(wxCommandEvent& event) {
     wxString selectedPalette = event.GetString();
     LoadStylesFromConfig(selectedPalette);
 }
-void wxMarkDownEditormainFrame::CreateDefaultConfigFile(const wxString& configFilePath) {
-    wxFileName configFile(configFilePath);
-    if (configFile.Exists()) {
-        return;
-    }
-
-    wxConfig* config = new wxConfig("wxMarkDownEditor", "", configFilePath);
+void wxMarkDownEditormainFrame::CreateDefaultConfigFile() {
+    // wxConfig* config = new wxConfig("wxMarkDownEditor", "", configFilePath);
     if (!config) {
         wxLogError("Unable to create configuration.");
         return;
