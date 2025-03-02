@@ -26,13 +26,13 @@ jobs:
       - name: Cache wxWidgets
         uses: actions/cache@v3
         with:
-          path: wxWidgets
+          path: ${{ github.workspace }}/wxWidgets-install
           key: wxwidgets-3.2.6-${{ runner.os }}
 
       - name: Cache cmark-gfm
         uses: actions/cache@v3
         with:
-          path: cmark-gfm
+          path: ${{ github.workspace }}/cmark-gfm-install
           key: cmark-gfm-${{ runner.os }}
 
       - name: Install dependencies (Ubuntu)
@@ -46,11 +46,11 @@ jobs:
 
       - name: Build wxWidgets from source
         run: |
-          git clone --branch v3.2.6 --depth 1 https://github.com/wxWidgets/wxWidgets.git ${GITHUB_WORKSPACE}/wxWidgets
-          cd ${GITHUB_WORKSPACE}/wxWidgets
+          git clone --branch v3.2.6 --depth 1 https://github.com/wxWidgets/wxWidgets.git ${{ github.workspace }}/wxWidgets
+          cd ${{ github.workspace }}/wxWidgets
           mkdir -p local_build
           cd local_build
-          cmake .. -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/wxWidgets-install -DCMAKE_BUILD_TYPE=Release -DwxBUILD_SHARED=OFF -DwxBUILD_TESTS=OFF
+          cmake .. -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/wxWidgets-install -DCMAKE_BUILD_TYPE=Release -DwxBUILD_SHARED=OFF -DwxBUILD_TESTS=OFF
           cmake --build . --config Release --target install
 
       - name: Build and install cmark-gfm
@@ -59,15 +59,15 @@ jobs:
           cd cmark-gfm
           mkdir -p build
           cd build
-          cmake .. -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/cmark-gfm-install -DCMAKE_BUILD_TYPE=Release -DCMARK_TESTS=OFF -DCMARK_STATIC=ON -DCMARK_SHARED=OFF
+          cmake .. -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/cmark-gfm-install -DCMAKE_BUILD_TYPE=Release -DCMARK_TESTS=OFF -DCMARK_STATIC=ON -DCMARK_SHARED=OFF
           cmake --build . --config Release --target install
 
       - name: Configure CMake
         run: |
-          cd ${GITHUB_WORKSPACE}/wxmarkdowneditor
-          cmake -B build -DWXWIDGETS_PATH=${GITHUB_WORKSPACE}/wxWidgets-install -DCMAKE_BUILD_TYPE=Release
+          cd ${{ github.workspace }}/wxmarkdowneditor
+          cmake -B build -DWXWIDGETS_PATH=${{ github.workspace }}/wxWidgets-install -DCMAKE_BUILD_TYPE=Release
         env:
-          CMAKE_PREFIX_PATH: ${GITHUB_WORKSPACE}/cmark-gfm-install
+          CMAKE_PREFIX_PATH: ${{ github.workspace }}/cmark-gfm-install
 
       - name: Build project
         run: cmake --build build --config Release
