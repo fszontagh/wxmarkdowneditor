@@ -47,8 +47,8 @@ jobs:
         run: |
           git clone --branch v3.2.6 --depth 1 https://github.com/wxWidgets/wxWidgets.git wxWidgets
           cd wxWidgets
-          mkdir -p build
-          cd build
+          mkdir -p local_build
+          cd local_build
           cmake .. -DCMAKE_INSTALL_PREFIX=$PWD/../install -DCMAKE_BUILD_TYPE=Release -DwxBUILD_SHARED=OFF -DwxBUILD_TESTS=OFF
           cmake --build . --config Release --target install
 
