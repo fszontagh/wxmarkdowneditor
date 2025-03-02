@@ -7,9 +7,6 @@
 
 #include "wxMarkDownEditorGUI.h"
 
-#include "../icons/html_code_16.png.h"
-#include "../icons/logo_16.png.h"
-
 // Using the construction of a static object to ensure that the help provider is set
 // wx Manages the most recent HelpProvider passed to ::Set, but not the previous ones
 // If ::Set gets called more than once, the previous one is returned and should be deleted
@@ -62,16 +59,9 @@ mainFrame::mainFrame( wxWindow* parent, wxWindowID id, const wxString& title, co
 	bSizer5->Fit( m_panel4 );
 	m_panel5 = new wxPanel( m_splitter1, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE|wxTAB_TRAVERSAL );
 	wxBoxSizer* bSizer7;
-	bSizer7 = new wxBoxSizer( wxVERTICAL );
+	bSizer7 = new wxBoxSizer( wxHORIZONTAL );
 
-	m_notebook1 = new wxNotebook( m_panel5, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxNB_NOPAGETHEME|wxNB_TOP|wxBORDER_DEFAULT, wxT("notebook1") );
-	wxSize m_notebook1ImageSize = wxSize( 16,16 );
-	int m_notebook1Index = 0;
-	wxImageList* m_notebook1Images = new wxImageList( m_notebook1ImageSize.GetWidth(), m_notebook1ImageSize.GetHeight() );
-	m_notebook1->AssignImageList( m_notebook1Images );
-	wxBitmap m_notebook1Bitmap;
-	wxImage m_notebook1Image;
-	MarkDownPanel = new wxPanel( m_notebook1, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE|wxTAB_TRAVERSAL, wxT("TabMarkdown") );
+	MarkDownPanel = new wxPanel( m_panel5, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE|wxTAB_TRAVERSAL, wxT("TabMarkdown") );
 	wxBoxSizer* bSizer2;
 	bSizer2 = new wxBoxSizer( wxVERTICAL );
 
@@ -119,33 +109,16 @@ mainFrame::mainFrame( wxWindow* parent, wxWindowID id, const wxString& title, co
 	MarkDownPanel->SetSizer( bSizer2 );
 	MarkDownPanel->Layout();
 	bSizer2->Fit( MarkDownPanel );
-	m_notebook1->AddPage( MarkDownPanel, _("MarkDown"), true );
-	m_notebook1Bitmap = logo_16_png_to_wx_bitmap();
-	if ( m_notebook1Bitmap.Ok() )
-	{
-		m_notebook1Image = m_notebook1Bitmap.ConvertToImage();
-		m_notebook1Images->Add( m_notebook1Image.Scale( m_notebook1ImageSize.GetWidth(), m_notebook1ImageSize.GetHeight() ) );
-		m_notebook1->SetPageImage( m_notebook1Index, m_notebook1Index );
-		m_notebook1Index++;
-	}
-	m_panel3 = new wxPanel( m_notebook1, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE|wxTAB_TRAVERSAL, wxT("TabHtml") );
+	bSizer7->Add( MarkDownPanel, 1, wxEXPAND | wxALL, 0 );
+
+	m_panel3 = new wxPanel( m_panel5, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE|wxTAB_TRAVERSAL, wxT("TabHtml") );
 	bSizer4 = new wxBoxSizer( wxVERTICAL );
 
 
 	m_panel3->SetSizer( bSizer4 );
 	m_panel3->Layout();
 	bSizer4->Fit( m_panel3 );
-	m_notebook1->AddPage( m_panel3, _("Preview"), false );
-	m_notebook1Bitmap = html_code_16_png_to_wx_bitmap();
-	if ( m_notebook1Bitmap.Ok() )
-	{
-		m_notebook1Image = m_notebook1Bitmap.ConvertToImage();
-		m_notebook1Images->Add( m_notebook1Image.Scale( m_notebook1ImageSize.GetWidth(), m_notebook1ImageSize.GetHeight() ) );
-		m_notebook1->SetPageImage( m_notebook1Index, m_notebook1Index );
-		m_notebook1Index++;
-	}
-
-	bSizer7->Add( m_notebook1, 1, wxEXPAND | wxALL, 5 );
+	bSizer7->Add( m_panel3, 1, wxEXPAND | wxALL, 0 );
 
 
 	m_panel5->SetSizer( bSizer7 );

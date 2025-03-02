@@ -453,6 +453,9 @@ void wxMarkDownEditormainFrame::UpdateOpenedFileInfo(const wxFileName& file, Fil
 
             // TODO: if the file is the current selected, ask user to load the new content amd if the file is not selected, but changed in the editor and chagnged externally, ask user to load the new content or overwrite the changes
             if (callback == FileInfo::CallbackType::CHANGED && this->currentFile->file.GetAbsolutePath() == file.GetFullPath()) {
+                if (this->currentFile->file.GetModificationTime() <= this->currentFile->lastModified) {
+                    continue;
+                }
                 // re-read the file contents and check if differ from the editor's content
                 wxString content;
                 wxFile file;

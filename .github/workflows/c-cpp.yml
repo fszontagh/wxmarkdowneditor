@@ -22,39 +22,40 @@ jobs:
         with:
           submodules: 'true'
 
-      - name: Install dependencies (Ubuntu)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt update
-          sudo apt install -y cmake g++ libwxgtk3.2-dev wx3.2-headers wx3.2-i18n wx-common \
-                              libwxgtk-webview3.2-dev libwxgtk-media3.2-dev libwxgtk-webview3.2-dev \
-                              libcmark-gfm-dev libcmark-gfm-extensions-dev
+      - name: Cache wxWidgets
+        uses: actions/cache@v3
+        with:
+          path: wxWidgets
+          key: wxwidgets-3.2.6-${{ runner.os }}
 
-      - name: Install dependencies (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' -y
-          choco install wxwidgets -y
+      - name: Cache cmark-gfm
+        uses: actions/cache@v3
+        with:
+          path: cmark-gfm
+          key: cmark-gfm-${{ runner.os }}
 
-      - name: Build and install cmark-gfm (Windows)
-        if: runner.os == 'Windows'
+      - name: Build wxWidgets from source
         run: |
-          git clone --recursive https://github.com/github/cmark-gfm.git
+          git clone --branch v3.2.6 --depth 1 https://github.com/wxWidgets/wxWidgets.git wxWidgets
+          cd wxWidgets
+          mkdir build
+          cd build
+          cmake .. -DCMAKE_INSTALL_PREFIX=$PWD/../install -DCMAKE_BUILD_TYPE=Release -DwxBUILD_SHARED=OFF -DwxBUILD_TESTS=OFF
+          cmake --build . --config Release --target install
+
+      - name: Build and install cmark-gfm
+        run: |
+          git clone --recursive https://github.com/github/cmark-gfm.git cmark-gfm
           cd cmark-gfm
           mkdir build
           cd build
-          cmake .. -DCMAKE_INSTALL_PREFIX=C:/cmark-gfm -DCMAKE_BUILD_TYPE=Release -DCMARK_TESTS=OFF -DCMARK_STATIC=ON -DCMARK_SHARED=OFF
+          cmake .. -DCMAKE_INSTALL_PREFIX=$PWD/../install -DCMAKE_BUILD_TYPE=Release -DCMARK_TESTS=OFF -DCMARK_STATIC=ON -DCMARK_SHARED=OFF
           cmake --build . --config Release --target install
 
       - name: Configure CMake
-        if: runner.os == 'Windows'
-        run: cmake -B build -DWXWIDGETS_PATH=C:/wxWidgets-3.1.2 -DCMAKE_BUILD_TYPE=Release
+        run: cmake -B build -DWXWIDGETS_PATH=$PWD/wxWidgets/install -DCMAKE_BUILD_TYPE=Release
         env:
-          CMAKE_PREFIX_PATH: C:/cmark-gfm
-
-      - name: Configure CMake
-        if: runner.os == 'Linux'
-        run: cmake -B build
+          CMAKE_PREFIX_PATH: $PWD/cmark-gfm/install
 
       - name: Build project
         run: cmake --build build --config Release

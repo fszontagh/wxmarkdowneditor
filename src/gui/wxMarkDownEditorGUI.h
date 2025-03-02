@@ -21,13 +21,11 @@
 #include <wx/sizer.h>
 #include <wx/panel.h>
 #include <wx/stc/stc.h>
+#include <wx/splitter.h>
+#include <wx/statusbr.h>
 #include <wx/bitmap.h>
 #include <wx/image.h>
 #include <wx/icon.h>
-#include <wx/notebook.h>
-#include <wx/imaglist.h>
-#include <wx/splitter.h>
-#include <wx/statusbr.h>
 #include <wx/menu.h>
 #include <wx/frame.h>
 
@@ -48,7 +46,6 @@ class mainFrame : public wxFrame
 		wxDataViewColumn* m_dataViewListColumn1;
 		wxDataViewColumn* m_dataViewListColumn2;
 		wxPanel* m_panel5;
-		wxNotebook* m_notebook1;
 		wxPanel* MarkDownPanel;
 		wxStyledTextCtrl* editor;
 		wxPanel* m_panel3;
