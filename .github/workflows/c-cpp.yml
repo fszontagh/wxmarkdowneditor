@@ -65,9 +65,7 @@ jobs:
       - name: Configure CMake
         run: |
           cd ${{ github.workspace }}/wxmarkdowneditor
-          cmake -B build -DWXWIDGETS_PATH=${{ github.workspace }}/wxWidgets-install -DCMAKE_BUILD_TYPE=Release
-        env:
-          CMAKE_PREFIX_PATH: ${{ github.workspace }}/cmark-gfm-install
+          cmake -B build -DWXWIDGETS_PATH=${{ github.workspace }}/wxWidgets-install -DCMARK_GFM_PATH=${{ github.workspace }}/cmark-gfm-install -DCMAKE_BUILD_TYPE=Release
 
       - name: Build project
         run: cmake --build build --config Release
