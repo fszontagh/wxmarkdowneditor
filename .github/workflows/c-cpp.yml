@@ -25,12 +25,14 @@ jobs:
 
       - name: Cache wxWidgets
         uses: actions/cache@v3
+        id: cache-wxwidgets
         with:
           path: ${{ github.workspace }}/wxWidgets-install
           key: wxwidgets-3.2.6-${{ runner.os }}
 
       - name: Cache cmark-gfm
         uses: actions/cache@v3
+        id: cache-cmark-gfm
         with:
           path: ${{ github.workspace }}/cmark-gfm-install
           key: cmark-gfm-${{ runner.os }}
@@ -45,6 +47,7 @@ jobs:
 
 
       - name: Build wxWidgets from source
+        if: steps.cache-wxwidgets.outputs.cache-hit != 'true'
         run: |
           git clone --branch v3.2.6 --recursive https://github.com/wxWidgets/wxWidgets.git ${{ github.workspace }}/wxWidgets
           cd ${{ github.workspace }}/wxWidgets
@@ -54,6 +57,7 @@ jobs:
           cmake --build . --config Release --target install
 
       - name: Build and install cmark-gfm
+        if: steps.cache-cmark-gfm.outputs.cache-hit != 'true'
         run: |
           git clone --recursive https://github.com/github/cmark-gfm.git cmark-gfm
           cd cmark-gfm
